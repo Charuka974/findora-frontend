@@ -1,0 +1,214 @@
+import React, { useEffect, useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Card, Form, Input, Button, Typography, Alert, message } from 'antd';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { LogIn, Key, Mail } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+
+const { Title, Text } = Typography;
+
+const loginSchema = z.object({
+  email: z.string().email('Please enter a valid email address').min(1, 'Email is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters').min(1, 'Password is required'),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+
+const Login: React.FC = () => {
+  const { login, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Check if redirect path is saved in router state
+  const from = (location.state as any)?.from?.pathname || '/';
+  const isSessionExpired = new URLSearchParams(location.search).get('expired') === 'true';
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  const onSubmit = async (data: LoginFormData) => {
+    setErrorText(null);
+    setIsSubmitting(true);
+    try {
+      await login({
+        email: data.email,
+        password: data.password,
+      });
+      message.success('Welcome back to Findora!');
+      navigate(from, { replace: true });
+    } catch (err: any) {
+      console.error(err);
+      setErrorText(err.response?.data?.message || err.message || 'Invalid credentials. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '80vh',
+        padding: '24px',
+        background: '#f9fafb',
+      }}
+    >
+      <Card
+        style={{
+          width: '100%',
+          maxWidth: '420px',
+          borderRadius: '16px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)',
+          border: '1px solid #f0f0f0',
+        }}
+        bodyStyle={{ padding: '32px' }}
+      >
+        {/* LOGO AREA */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold',
+              color: '#fff',
+              fontSize: '24px',
+              boxShadow: '0 4px 12px rgba(24, 144, 255, 0.3)',
+              marginBottom: '12px',
+            }}
+          >
+            F
+          </div>
+          <Title level={3} style={{ margin: 0, fontWeight: 700, color: '#1f1f1f' }}>
+            Log In to Findora
+          </Title>
+          <Text type="secondary" style={{ fontSize: '14px' }}>
+            Reconnect with your belongings
+          </Text>
+        </div>
+
+        {/* NOTIFICATIONS */}
+        {isSessionExpired && (
+          <Alert
+            message="Session Expired"
+            description="Your login session has expired. Please log in again."
+            type="warning"
+            showIcon
+            closable
+            style={{ marginBottom: '20px', borderRadius: '8px' }}
+          />
+        )}
+
+        {errorText && (
+          <Alert
+            message="Login Failed"
+            description={errorText}
+            type="error"
+            showIcon
+            closable
+            onClose={() => setErrorText(null)}
+            style={{ marginBottom: '20px', borderRadius: '8px' }}
+          />
+        )}
+
+        {/* LOGIN FORM */}
+        <Form layout="vertical" onFinish={handleSubmit(onSubmit)}>
+          
+          <Form.Item
+            label="Email Address"
+            validateStatus={errors.email ? 'error' : ''}
+            help={errors.email?.message}
+            required
+          >
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  placeholder="e.g. yourname@domain.com"
+                  prefix={<Mail size={16} style={{ color: '#bfbfbf', marginRight: '6px' }} />}
+                  size="large"
+                />
+              )}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Password"
+            validateStatus={errors.password ? 'error' : ''}
+            help={errors.password?.message}
+            required
+          >
+            <Controller
+              name="password"
+              control={control}
+              render={({ field }) => (
+                <Input.Password
+                  {...field}
+                  placeholder="Enter your password"
+                  prefix={<Key size={16} style={{ color: '#bfbfbf', marginRight: '6px' }} />}
+                  size="large"
+                />
+              )}
+            />
+          </Form.Item>
+
+          <Form.Item style={{ marginTop: '28px', marginBottom: '8px' }}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              size="large"
+              block
+              shape="round"
+              loading={isSubmitting}
+              icon={<LogIn size={18} style={{ marginRight: '6px' }} />}
+              style={{ fontWeight: 600 }}
+            >
+              Log In
+            </Button>
+          </Form.Item>
+        </Form>
+
+        {/* REGISTRATION REDIRECT */}
+        <div style={{ textAlign: 'center', marginTop: '16px' }}>
+          <Text type="secondary" style={{ fontSize: '14px' }}>
+            New to Findora?{' '}
+            <Link to="/register" style={{ fontWeight: 600 }}>
+              Create an Account
+            </Link>
+          </Text>
+        </div>
+
+      </Card>
+    </div>
+  );
+};
+
+export default Login;
