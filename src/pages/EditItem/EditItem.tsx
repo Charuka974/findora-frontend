@@ -86,6 +86,9 @@ const EditItem: React.FC = () => {
         location: data.location,
         imageUrls: data.imageUrls,
         date: data.formattedDate,
+        ownerName: item.ownerName || currentUser?.name || currentUser?.name,
+        ownerEmail: item.ownerEmail || currentUser?.email,
+        ownerPhone: item.ownerPhone || currentUser?.phone,
       });
 
       message.success('Listing details updated successfully!');

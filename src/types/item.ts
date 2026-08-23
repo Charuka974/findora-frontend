@@ -20,6 +20,8 @@ export type ItemCategory = typeof ITEM_CATEGORIES[number];
 export interface Claim {
   claimId: string;
   claimerId: number;
+  claimerName?: string;
+  claimerEmail?: string;
   proofDescription: string;
   contactPhone: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -35,7 +37,7 @@ export interface Item {
   status: ItemStatus;
   location: string;
   date?: string;
-  imageUrls: string[]; // Updated to match backend list of image URLs
+  imageUrls: string[]; 
   reportedBy?: number;
   createdAt: string;
   updatedAt: string;
@@ -54,8 +56,19 @@ export interface CreateItemRequest {
   type: ItemType;
   location: string;
   date?: string;
-  imageUrls: string[]; // Updated to match backend list of image URLs
+  imageUrls: string[]; 
   reportedBy?: number;
+  ownerName?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
+}
+
+export interface SubmitClaimRequest {
+  claimerId: number;
+  claimerName?: string;
+  proofDescription: string;
+  contactPhone: string;
+  contactEmail?: string;
 }
 
 export interface UpdateItemRequest {
@@ -66,5 +79,8 @@ export interface UpdateItemRequest {
   status?: ItemStatus;
   location?: string;
   date?: string;
-  imageUrls?: string[]; // Updated to match backend list of image URLs
+  imageUrls?: string[]; 
+  ownerName?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
 }

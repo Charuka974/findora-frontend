@@ -58,8 +58,8 @@ const MyItems: React.FC = () => {
     try {
       setIsLoading(true);
       setHasError(false);
-      // Fetch only items belonging to current user
-      const data = await itemService.getItems({ userId: currentUser.id });
+      // Fetch all items to allow filtering for both reported and claimed items
+      const data = await itemService.getItems();
       setAllItems(data);
     } catch (err) {
       console.error('Failed to load user listings:', err);
@@ -73,18 +73,27 @@ const MyItems: React.FC = () => {
     fetchUserItems();
   }, [currentUser]);
 
-  // Apply tab filtering locally to avoid double round-trips
+  // Apply tab filtering locally
   useEffect(() => {
-    let items = [...allItems];
-    if (activeTab === 'lost') {
-      items = items.filter((i) => i.type === 'LOST');
-    } else if (activeTab === 'found') {
-      items = items.filter((i) => i.type === 'FOUND');
-    } else if (activeTab === 'resolved') {
-      items = items.filter((i) => i.status === 'RESOLVED');
+    if (!currentUser) return;
+    let items = [];
+    if (activeTab === 'claims') {
+      items = allItems.filter((i) => i.claims?.some(c => Number(c.claimerId) === Number(currentUser.id)));
+    } else {
+      // For all other tabs, only show items reported by the current user
+      const userReportedItems = allItems.filter(i => Number(i.reportedBy) === Number(currentUser.id));
+      if (activeTab === 'lost') {
+        items = userReportedItems.filter((i) => i.type === 'LOST');
+      } else if (activeTab === 'found') {
+        items = userReportedItems.filter((i) => i.type === 'FOUND');
+      } else if (activeTab === 'resolved') {
+        items = userReportedItems.filter((i) => i.status === 'RESOLVED');
+      } else {
+        items = userReportedItems;
+      }
     }
     setFilteredItems(items);
-  }, [allItems, activeTab]);
+  }, [allItems, activeTab, currentUser]);
 
   const handleDeleteTrigger = (id: string) => {
     setSelectedItemId(id);
@@ -189,6 +198,48 @@ const MyItems: React.FC = () => {
       )
     },
     {
+      title: activeTab === 'claims' ? 'My Claim Status' : 'Claims Verification',
+      key: 'claims',
+      render: (_: any, record: Item) => {
+        if (activeTab === 'claims') {
+          // Show the current user's claim status on this item
+          const myClaim = record.claims?.find(c => Number(c.claimerId) === Number(currentUser?.id));
+          if (!myClaim) return <Text type="secondary">-</Text>;
+          return (
+            <Space direction="vertical" size={2}>
+              <Tag color={myClaim.status === 'APPROVED' ? 'green' : myClaim.status === 'REJECTED' ? 'red' : 'gold'} style={{ fontWeight: 600 }}>
+                {myClaim.status}
+              </Tag>
+              <Link to={`/items/${record.id}`}>
+                <Button type="link" size="small" style={{ padding: 0, height: 'auto', fontSize: '12px' }}>
+                  View Details &rarr;
+                </Button>
+              </Link>
+            </Space>
+          );
+        }
+
+        if (record.type !== 'FOUND') return <Text type="secondary">-</Text>;
+        const claims = record.claims || [];
+        const pendingCount = claims.filter(c => c.status === 'PENDING').length;
+        
+        if (claims.length === 0) return <Text type="secondary">No claims yet</Text>;
+
+        return (
+          <Space direction="vertical" size={2}>
+            <Tag color={pendingCount > 0 ? 'gold' : 'green'} style={{ fontWeight: 600 }}>
+              {claims.length} Claim{claims.length !== 1 ? 's' : ''} ({pendingCount} pending)
+            </Tag>
+            <Link to={`/items/${record.id}`}>
+              <Button type="link" size="small" style={{ padding: 0, height: 'auto', fontSize: '12px' }}>
+                Manage Claims &rarr;
+              </Button>
+            </Link>
+          </Space>
+        );
+      }
+    },
+    {
       title: 'Reported Date',
       dataIndex: 'createdAt',
       key: 'createdAt',
@@ -234,38 +285,68 @@ const MyItems: React.FC = () => {
   // Mobile layout component
   const renderMobileCards = () => (
     <Row gutter={[16, 16]}>
-      {filteredItems.map((item) => (
-        <Col key={item.id} xs={24} sm={12}>
-          <div style={{ position: 'relative' }}>
-            <ItemCard item={item} />
-            <div 
-              style={{ 
-                position: 'absolute', 
-                bottom: '16px', 
-                right: '16px', 
-                zIndex: 10,
-                display: 'flex',
-                gap: '8px'
-              }}
-            >
-              <Link to={`/items/${item.id}/edit`}>
-                <Button size="small" icon={<Edit size={12} />} style={{ display: 'flex', alignItems: 'center' }}>
-                  Edit
-                </Button>
-              </Link>
-              <Button 
-                danger 
-                size="small" 
-                icon={<Trash2 size={12} />} 
-                onClick={() => handleDeleteTrigger(item.id)}
-                style={{ display: 'flex', alignItems: 'center' }}
+      {filteredItems.map((item) => {
+        const pendingClaimsCount = item.claims?.filter(c => c.status === 'PENDING').length || 0;
+        return (
+          <Col key={item.id} xs={24} sm={12}>
+            <div style={{ position: 'relative' }}>
+              <ItemCard item={item} />
+              
+              {/* Claims Badge for Mobile */}
+              {activeTab === 'claims' ? (() => {
+                const myClaim = item.claims?.find(c => Number(c.claimerId) === Number(currentUser?.id));
+                if (!myClaim) return null;
+                return (
+                  <div style={{ padding: '8px 12px', background: '#e6f7ff', borderTop: '1px solid #91caff', fontSize: '13px' }}>
+                    <Text strong>Claim Status: </Text>
+                    <Tag color={myClaim.status === 'APPROVED' ? 'green' : myClaim.status === 'REJECTED' ? 'red' : 'gold'}>
+                      {myClaim.status}
+                    </Tag>
+                    <Link to={`/items/${item.id}`} style={{ display: 'block', marginTop: '4px', fontSize: '12px' }}>
+                      View Details &rarr;
+                    </Link>
+                  </div>
+                );
+              })() : (
+                item.type === 'FOUND' && item.claims && item.claims.length > 0 && (
+                  <div style={{ padding: '8px 12px', background: '#fffbe6', borderTop: '1px solid #ffe58f', fontSize: '13px' }}>
+                    <Text strong>{item.claims.length} Claim(s)</Text> {pendingClaimsCount > 0 && <Tag color="gold" style={{ marginLeft: '8px' }}>{pendingClaimsCount} Pending</Tag>}
+                    <Link to={`/items/${item.id}`} style={{ display: 'block', marginTop: '4px', fontSize: '12px' }}>
+                      View & Manage Claims &rarr;
+                    </Link>
+                  </div>
+                )
+              )}
+
+              <div 
+                style={{ 
+                  position: 'absolute', 
+                  bottom: '16px', 
+                  right: '16px', 
+                  zIndex: 10,
+                  display: 'flex',
+                  gap: '8px'
+                }}
               >
-                Delete
-              </Button>
+                <Link to={`/items/${item.id}/edit`}>
+                  <Button size="small" icon={<Edit size={12} />} style={{ display: 'flex', alignItems: 'center' }}>
+                    Edit
+                  </Button>
+                </Link>
+                <Button 
+                  danger 
+                  size="small" 
+                  icon={<Trash2 size={12} />} 
+                  onClick={() => handleDeleteTrigger(item.id)}
+                  style={{ display: 'flex', alignItems: 'center' }}
+                >
+                  Delete
+                </Button>
+              </div>
             </div>
-          </div>
-        </Col>
-      ))}
+          </Col>
+        );
+      })}
     </Row>
   );
 
@@ -302,10 +383,11 @@ const MyItems: React.FC = () => {
         onChange={(key) => setActiveTab(key)}
         style={{ marginBottom: '20px' }}
         items={[
-          { label: 'All Items', key: 'all' },
+          { label: 'My Reported Items', key: 'all' },
           { label: 'My Lost Items', key: 'lost' },
           { label: 'My Found Items', key: 'found' },
           { label: 'Resolved', key: 'resolved' },
+          { label: 'My Claims', key: 'claims' },
         ]}
       />
 

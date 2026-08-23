@@ -14,7 +14,10 @@ import {
   Modal, 
   message,
   Breadcrumb,
-  Alert
+  Alert,
+  Form,
+  Input,
+  Table
 } from 'antd';
 import { 
   MapPin, 
@@ -39,6 +42,7 @@ import LoadingState from '../../components/common/LoadingState';
 import ErrorState from '../../components/common/ErrorState';
 
 const { Title, Paragraph, Text } = Typography;
+const { TextArea } = Input;
 
 const ItemDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -54,6 +58,10 @@ const ItemDetails: React.FC = () => {
   const [isResolveOpen, setIsResolveOpen] = useState<boolean>(false);
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
   const [isSubmittingAction, setIsSubmittingAction] = useState<boolean>(false);
+  const [isClaimModalOpen, setIsClaimModalOpen] = useState<boolean>(false);
+  const [isSubmittingClaim, setIsSubmittingClaim] = useState<boolean>(false);
+
+  const [claimForm] = Form.useForm();
 
   useEffect(() => {
     const fetchItem = async () => {
@@ -91,8 +99,13 @@ const ItemDetails: React.FC = () => {
   }
 
   // Permission Check
-  const isOwner = currentUser && Number(item.reportedBy) === Number(currentUser.id);  const isLost = item.type === 'LOST';
+  const isOwner = currentUser && Number(item.reportedBy) === Number(currentUser.id);
+  const isLost = item.type === 'LOST';
   const isOpen = item.status === 'OPEN';
+
+  // Check if current user has already claimed this item
+  const myClaims = item.claims?.filter(c => Number(c.claimerId) === Number(currentUser?.id)) || [];
+  const hasClaimed = myClaims.length > 0;
 
   const handleDeleteConfirm = async () => {
     setIsSubmittingAction(true);
@@ -120,6 +133,41 @@ const ItemDetails: React.FC = () => {
       message.error('Failed to update listing status.');
     } finally {
       setIsSubmittingAction(false);
+    }
+  };
+
+  const handleClaimSubmit = async (values: { proofDescription: string; contactPhone: string; contactEmail: string }) => {
+    if (!item || !currentUser) return;
+    setIsSubmittingClaim(true);
+    try {
+      const updatedItem = await itemService.submitClaim(item.id, {
+        claimerId: Number(currentUser.id),
+        claimerName: currentUser.name || currentUser.name,
+        proofDescription: values.proofDescription,
+        contactPhone: values.contactPhone,
+        contactEmail: values.contactEmail,
+      });
+      setItem(updatedItem);
+      message.success('Claim submitted successfully! The owner will review your proof.');
+      setIsClaimModalOpen(false);
+      claimForm.resetFields();
+    } catch (err: any) {
+      console.error(err);
+      message.error(err.response?.data?.message || err.message || 'Failed to submit claim.');
+    } finally {
+      setIsSubmittingClaim(false);
+    }
+  };
+
+  const handleResolveClaim = async (claimId: string, status: 'APPROVED' | 'REJECTED') => {
+    if (!item) return;
+    try {
+      const updatedItem = await itemService.resolveClaim(item.id, claimId, status);
+      setItem(updatedItem);
+      message.success(`Claim successfully ${status.toLowerCase()}ed.`);
+    } catch (err: any) {
+      console.error(err);
+      message.error(err.response?.data?.message || err.message || `Failed to ${status.toLowerCase()} claim.`);
     }
   };
 
@@ -252,12 +300,54 @@ const ItemDetails: React.FC = () => {
                 {item.description}
               </Paragraph>
               
+              {/* CONTACT INFO (Now visible for both LOST and FOUND items) */}
+              <Card 
+                size="small" 
+                title={<Text strong style={{ color: '#1f1f1f', display: 'flex', alignItems: 'center', gap: '6px' }}><User size={16} /> Reporter Contact Information</Text>} 
+                style={{ 
+                  marginTop: '24px', 
+                  borderRadius: '12px', 
+                  background: '#fafafa',
+                  border: '1px solid #f0f0f0' 
+                }}
+              >
+                {isAuthenticated ? (
+                  <Descriptions column={1} size="small" style={{ marginTop: '8px' }}>
+                    <Descriptions.Item label="Reporter Name">
+                      <Text strong>{item.ownerName || `User #${item.reportedBy}`}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Email">
+                      {item.ownerEmail ? (
+                        <a href={`mailto:${item.ownerEmail}?subject=Findora - Regarding ${item.title}`}>{item.ownerEmail}</a>
+                      ) : 'Not Provided'}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Phone">
+                      {item.ownerPhone ? (
+                        <a href={`tel:${item.ownerPhone}`}>{item.ownerPhone}</a>
+                      ) : 'Not Provided'}
+                    </Descriptions.Item>
+                  </Descriptions>
+                ) : (
+                  <div style={{ padding: '8px 0' }}>
+                    <Alert
+                      message={
+                        <span>
+                          Please <Link to="/login" state={{ from: { pathname: `/items/${item.id}` } }}>log in</Link> to view contact details so you can reach out directly.
+                        </span>
+                      }
+                      type="warning"
+                      showIcon
+                    />
+                  </div>
+                )}
+              </Card>
+
               {!isOpen && (
                 <Alert 
                   message={`This item listing is RESOLVED. It has been successfully returned or matched.`} 
                   type="success" 
                   showIcon 
-                  style={{ marginBottom: '24px', borderRadius: '8px' }}
+                  style={{ marginTop: '24px', borderRadius: '8px' }}
                 />
               )}
             </div>
@@ -311,25 +401,47 @@ const ItemDetails: React.FC = () => {
                 /* GUEST ACTIONS */
                 <Row gutter={[16, 16]}>
                   <Col xs={24} sm={12}>
-                    <Button 
-                      type="primary" 
-                      size="large" 
-                      block 
-                      shape="round"
-                      disabled={!isOpen}
-                      icon={<Mail size={18} style={{ marginRight: '6px' }} />}
-                      onClick={() => {
-                        if (isAuthenticated) {
-                          setIsContactOpen(true);
-                        } else {
-                          message.warning('Please log in to contact the owner.');
-                          navigate('/login', { state: { from: { pathname: `/items/${item.id}` } } });
-                        }
-                      }}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}
-                    >
-                      Contact Owner
-                    </Button>
+                    {isLost ? (
+                      <Button 
+                        type="primary" 
+                        size="large" 
+                        block 
+                        shape="round"
+                        disabled={!isOpen}
+                        icon={<Mail size={18} style={{ marginRight: '6px' }} />}
+                        onClick={() => {
+                          if (isAuthenticated) {
+                            setIsContactOpen(true);
+                          } else {
+                            message.warning('Please log in to contact the owner.');
+                            navigate('/login', { state: { from: { pathname: `/items/${item.id}` } } });
+                          }
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}
+                      >
+                        Contact Owner
+                      </Button>
+                    ) : (
+                      <Button 
+                        type="primary" 
+                        size="large" 
+                        block 
+                        shape="round"
+                        disabled={!isOpen || hasClaimed}
+                        icon={<CheckCircle size={18} style={{ marginRight: '6px' }} />}
+                        onClick={() => {
+                          if (isAuthenticated) {
+                            setIsClaimModalOpen(true);
+                          } else {
+                            message.warning('Please log in to claim this item.');
+                            navigate('/login', { state: { from: { pathname: `/items/${item.id}` } } });
+                          }
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, backgroundColor: (isOpen && !hasClaimed) ? '#52c41a' : undefined, borderColor: (isOpen && !hasClaimed) ? '#52c41a' : undefined }}
+                      >
+                        {hasClaimed ? 'Claim Submitted' : 'Claim Item'}
+                      </Button>
+                    )}
                   </Col>
                   <Col xs={12} sm={6}>
                     <Button 
@@ -421,6 +533,199 @@ const ItemDetails: React.FC = () => {
               ) : 'Not Provided'}
             </Descriptions.Item>
           </Descriptions>
+        </div>
+      </Modal>
+
+      {/* SHOW NON-OWNER THEIR OWN SUBMITTED CLAIMS */}
+      {!isOwner && hasClaimed && (
+        <Card 
+          title={<span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={18} style={{ color: '#1890ff' }} /> Your Submitted Claim Status</span>}
+          style={{ 
+            marginTop: '32px', 
+            borderRadius: '16px', 
+            boxShadow: '0 6px 18px rgba(0,0,0,0.03)', 
+            border: '1px solid #91caff',
+            background: '#e6f7ff' 
+          }}
+        >
+          {myClaims.map(claim => (
+            <Descriptions key={claim.claimId} column={{ xs: 1, sm: 2, md: 3 }} bordered size="small" style={{ marginBottom: '16px', background: '#ffffff' }}>
+              <Descriptions.Item label="Status">
+                <Tag color={claim.status === 'APPROVED' ? 'green' : claim.status === 'REJECTED' ? 'red' : 'gold'}>
+                  {claim.status}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Date Submitted">
+                {dayjs(claim.createdAt).format('MMMM DD, YYYY')}
+              </Descriptions.Item>
+              <Descriptions.Item label="Your Contact Phone">
+                {claim.contactPhone}
+              </Descriptions.Item>
+              <Descriptions.Item label="Proof Provided" span={3}>
+                {claim.proofDescription}
+              </Descriptions.Item>
+            </Descriptions>
+          ))}
+        </Card>
+      )}
+
+      {/* SHOW OWNER ALL SUBMITTED CLAIMS TO MANAGE */}
+      {isOwner && !isLost && (
+      <Card 
+        title="Submitted Claims & Verification" 
+        style={{ 
+          marginTop: '32px', 
+          borderRadius: '16px', 
+          boxShadow: '0 6px 18px rgba(0,0,0,0.03)', 
+          border: '1px solid #f0f0f0' 
+        }}
+      >
+        <Table
+          dataSource={item.claims || []}
+          rowKey="claimId"
+          scroll={{ x: 900 }} /* <-- ADDED: Enables horizontal scrolling on mobile */
+          columns={[
+            {
+              title: 'Claimant Name & ID',
+              key: 'claimerName',
+              render: (_: any, record: any) => (
+                <div>
+                  <Text strong>{record.claimerName || `User #${record.claimerId}`}</Text>
+                  <div><Text type="secondary" style={{ fontSize: '12px' }}>ID: {record.claimerId}</Text></div>
+                </div>
+              )
+            },
+            {
+              title: 'Claimant Email',
+              dataIndex: 'claimerEmail',
+              key: 'claimerEmail',
+              render: (email: string) => email ? <a href={`mailto:${email}`}>{email}</a> : <Text type="secondary">Not Provided</Text>
+            },
+            {
+              title: 'Proof Description',
+              dataIndex: 'proofDescription',
+              key: 'proofDescription',
+              render: (text: string) => (
+                <Paragraph style={{ margin: 0, minWidth: '200px' }} ellipsis={{ rows: 2, expandable: true, symbol: 'more' }}>
+                  {text}
+                </Paragraph>
+              )
+            },
+            {
+              title: 'Contact Phone',
+              dataIndex: 'contactPhone',
+              key: 'contactPhone',
+              render: (phone: string) => <a href={`tel:${phone}`}>{phone}</a>
+            },
+            {
+              title: 'Status',
+              dataIndex: 'status',
+              key: 'status',
+              render: (status: string) => {
+                let color = 'gold';
+                if (status === 'APPROVED') color = 'green';
+                if (status === 'REJECTED') color = 'red';
+                return <Tag color={color}>{status}</Tag>;
+              }
+            },
+            {
+              title: 'Actions',
+              key: 'actions',
+              fixed: 'right', /* <-- ADDED: Pins the action buttons to the right edge while scrolling */
+              render: (_, record) => {
+                if (record.status !== 'PENDING') {
+                  return <Text type="secondary">-</Text>;
+                }
+                return (
+                  <Space>
+                    <Button 
+                      type="primary" 
+                      size="small" 
+                      style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+                      onClick={() => handleResolveClaim(record.claimId, 'APPROVED')}
+                    >
+                      Approve
+                    </Button>
+                    <Button 
+                      danger 
+                      size="small" 
+                      onClick={() => handleResolveClaim(record.claimId, 'REJECTED')}
+                    >
+                      Reject
+                    </Button>
+                  </Space>
+                );
+              }
+            }
+          ]}
+          pagination={{ pageSize: 5 }}
+          locale={{ emptyText: 'No claims submitted yet.' }}
+        />
+      </Card>
+    )}
+
+      {/* CLAIM ITEM MODAL */}
+      <Modal
+        open={isClaimModalOpen}
+        title="Submit Claim & Proof of Ownership"
+        onCancel={() => setIsClaimModalOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <div style={{ padding: '8px 0' }}>
+          <Paragraph>
+            Please provide proof description and your contact details to claim this item. The poster will review your claim.
+          </Paragraph>
+          <Form
+            form={claimForm}
+            layout="vertical"
+            onFinish={handleClaimSubmit}
+            initialValues={{ 
+              contactPhone: currentUser?.phone || '',
+              contactEmail: currentUser?.email || ''
+            }}
+          >
+            <Form.Item
+              name="proofDescription"
+              label="Proof of Ownership"
+              rules={[{ required: true, message: 'Please describe the proof of ownership' }]}
+            >
+              <TextArea
+                rows={4}
+                placeholder="Provide specific details about the item that only the owner would know (e.g. serial numbers, unique characteristics, lock screen wallpaper, contents, etc.)"
+              />
+            </Form.Item>
+            
+            <Form.Item
+              name="contactPhone"
+              label="Contact Phone Number"
+              rules={[{ required: true, message: 'Please provide your contact phone number' }]}
+            >
+              <Input placeholder="e.g. +94 77 123 4567" />
+            </Form.Item>
+
+            <Form.Item
+              name="contactEmail"
+              label="Contact Email Address"
+              rules={[
+                { required: true, message: 'Please provide your contact email' },
+                { type: 'email', message: 'Please enter a valid email address' }
+              ]}
+            >
+              <Input placeholder="e.g. user@example.com" />
+            </Form.Item>
+
+            <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
+              <Space>
+                <Button onClick={() => setIsClaimModalOpen(false)} shape="round">
+                  Cancel
+                </Button>
+                <Button type="primary" htmlType="submit" loading={isSubmittingClaim} shape="round" style={{ backgroundColor: '#52c41a' }}>
+                  Submit Claim
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
         </div>
       </Modal>
 

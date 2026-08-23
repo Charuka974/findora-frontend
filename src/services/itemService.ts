@@ -46,7 +46,10 @@ export const itemService = {
       location: request.location,
       date: request.date || new Date().toISOString(),
       imageUrls: request.imageUrls || [],
-      reportedBy: currentUser?.id
+      reportedBy: currentUser?.id,
+      ownerName: currentUser?.name || currentUser?.username,
+      ownerEmail: currentUser?.email,
+      ownerPhone: currentUser?.phone
     };
 
     const res = await api.post<Item>('/api/v1/items', payload);
@@ -63,6 +66,9 @@ export const itemService = {
       location: request.location,
       date: request.date,
       imageUrls: request.imageUrls || [],
+      ownerName: request.ownerName,
+      ownerEmail: request.ownerEmail,
+      ownerPhone: request.ownerPhone,
     };
 
     const res = await api.put<Item>(`/api/v1/items/${id}`, payload);
@@ -82,7 +88,7 @@ export const itemService = {
 
   // --- CLAIM METHODS ---
 
-  async submitClaim(id: string, claimData: { claimerId: number; proofDescription: string; contactPhone: string }): Promise<Item> {
+  async submitClaim(id: string, claimData: import('../types/item').SubmitClaimRequest): Promise<Item> {
     const res = await api.post<Item>(`/api/v1/items/${id}/claims`, claimData);
     return res.data;
   },
