@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  // This should point to your Spring Cloud Gateway: http://localhost:8080
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -35,7 +36,7 @@ api.interceptors.response.use(
         }
       }
     } else {
-      // Network errors
+      // Network errors (e.g., Gateway is down)
       console.error('Network Error / Server Unreachable:', error.message);
     }
     return Promise.reject(error);

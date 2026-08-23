@@ -26,13 +26,24 @@ const itemFormSchema = z.object({
   date: z.any().refine((val) => val !== null && val !== undefined, {
     message: 'Date is required',
   }),
-  media: z.array(z.string()),
+  imageUrls: z.array(z.string()).default([]),
 });
 
+// Explicitly define input and output form types to satisfy react-hook-form + zodResolver
 export type ItemFormData = z.infer<typeof itemFormSchema>;
+type ItemFormInput = z.input<typeof itemFormSchema>;
 
 interface ItemFormProps {
-  initialValues?: Partial<ItemFormData & { dateString?: string }>;
+  initialValues?: {
+    type?: ItemType;
+    title?: string;
+    category?: string;
+    description?: string;
+    location?: string;
+    date?: any;
+    dateString?: string;
+    imageUrls?: string[];
+  };
   onSubmit: (data: ItemFormData & { formattedDate: string }) => void;
   isSubmitting?: boolean;
   submitButtonText?: string;
@@ -46,28 +57,27 @@ const ItemForm: React.FC<ItemFormProps> = ({
   submitButtonText = 'Submit Report',
   fixedType,
 }) => {
-  // Transform initial values (e.g. date conversion for Dayjs)
-  const defaultValues: ItemFormData = {
-    type: fixedType || initialValues?.type || 'LOST',
-    title: initialValues?.title || '',
-    category: initialValues?.category || '',
-    description: initialValues?.description || '',
-    location: initialValues?.location || '',
-    date: initialValues?.date 
-      ? dayjs(initialValues.date) 
-      : initialValues?.dateString 
-        ? dayjs(initialValues.dateString) 
-        : dayjs(),
-    media: initialValues?.media || [],
-  };
-
   const {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<ItemFormData>({
+  } = useForm<ItemFormInput, any, ItemFormData>({
     resolver: zodResolver(itemFormSchema),
-    defaultValues,
+    defaultValues: {
+      type: fixedType || initialValues?.type || 'LOST',
+      title: initialValues?.title || '',
+      category: initialValues?.category || '',
+      description: initialValues?.description || '',
+      location: initialValues?.location || '',
+      date: initialValues?.date 
+        ? dayjs(initialValues.date) 
+        : initialValues?.dateString 
+          ? dayjs(initialValues.dateString) 
+          : dayjs(),
+      imageUrls: initialValues?.imageUrls && initialValues.imageUrls.length > 0 
+        ? initialValues.imageUrls 
+        : [],
+    },
   });
 
   const onFormSubmit = (data: ItemFormData) => {
@@ -81,10 +91,10 @@ const ItemForm: React.FC<ItemFormProps> = ({
   return (
     <Form layout="vertical" onFinish={handleSubmit(onFormSubmit)}>
       <Row gutter={24}>
-        
+
         {/* LEFT COLUMN: BASIC METADATA */}
         <Col xs={24} lg={14}>
-          
+
           {/* TYPE FIELD */}
           {!fixedType && (
             <Form.Item
@@ -150,7 +160,7 @@ const ItemForm: React.FC<ItemFormProps> = ({
                 />
               </Form.Item>
             </Col>
-            
+
             <Col xs={24} sm={12}>
               <Form.Item
                 label="Date Lost / Found"
@@ -204,7 +214,7 @@ const ItemForm: React.FC<ItemFormProps> = ({
               render={({ field }) => (
                 <TextArea
                   {...field}
-                  placeholder="Provide distinct characteristics (colors, stickers, brand, case, or contents of the bag/wallet) to help others identify the item."
+                  placeholder="Provide distinct characteristics to help others identify the item."
                   rows={6}
                   maxLength={1000}
                   showCount
@@ -214,19 +224,19 @@ const ItemForm: React.FC<ItemFormProps> = ({
           </Form.Item>
         </Col>
 
-        {/* RIGHT COLUMN: MEDIA UPLOAD */}
+        {/* RIGHT COLUMN: MULTIPLE MEDIA UPLOAD */}
         <Col xs={24} lg={10}>
           <Form.Item
-            label="Upload Images"
-            validateStatus={errors.media ? 'error' : ''}
-            help={errors.media?.message}
+            label="Upload Images (Up to 5)"
+            validateStatus={errors.imageUrls ? 'error' : ''}
+            help={errors.imageUrls?.message}
           >
             <Controller
-              name="media"
+              name="imageUrls"
               control={control}
               render={({ field }) => (
                 <MediaUploader
-                  value={field.value}
+                  value={field.value || []}
                   onChange={field.onChange}
                   maxCount={5}
                 />

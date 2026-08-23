@@ -59,11 +59,28 @@ const Items: React.FC = () => {
           type: typeParam,
           category: categoryParam,
           status: statusParam,
-          search: searchParam,
           location: locationParam,
-          sort: sortParam,
         });
-        setItems(data);
+
+        // Optional frontend filtering for search keywords if backend search endpoint filters locally
+        let filteredData = data;
+        if (searchParam) {
+          const query = searchParam.toLowerCase();
+          filteredData = data.filter(
+            (item) =>
+              item.title.toLowerCase().includes(query) ||
+              item.description.toLowerCase().includes(query)
+          );
+        }
+
+        // Apply sorting (newest/oldest)
+        filteredData.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return sortParam === 'oldest' ? dateA - dateB : dateB - dateA;
+        });
+
+        setItems(filteredData);
       } catch (err) {
         console.error('Failed to retrieve items directory:', err);
         setHasError(true);
@@ -122,7 +139,7 @@ const Items: React.FC = () => {
       />
 
       <div style={{ marginBottom: '24px' }}>
-        <Title level={2} style={{ margin: 0, fontWeight: 700, color: '#462121' }}>
+        <Title level={2} style={{ margin: 0, fontWeight: 700, color: '#002c8c' }}>
           Lost & Found Directory
         </Title>
         <Paragraph style={{ color: '#595959', margin: '4px 0 0 0' }}>
@@ -135,7 +152,7 @@ const Items: React.FC = () => {
         style={{ 
           marginBottom: '24px', 
           borderRadius: '12px', 
-          boxShadow: '0 4px 12px rgba(165, 33, 33, 0.02)',
+          boxShadow: '0 4px 12px rgba(24, 144, 255, 0.02)',
           border: '1px solid #f0f0f0' 
         }}
         styles={{ body: { padding: '20px' } }}
@@ -274,12 +291,10 @@ const Items: React.FC = () => {
           ))}
         </Row>
       ) : hasError ? (
-        <ErrorState onRetry={() => navigate(0)} />
+        <ErrorState message="Could not retrieve items from the directory." />
       ) : items.length === 0 ? (
         <EmptyState 
           message="No items match your active filters. Try broadening your keywords." 
-          actionText="Clear Filters" 
-          onAction={handleResetFilters} 
         />
       ) : (
         <div>

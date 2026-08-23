@@ -50,9 +50,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
       return;
     }
 
-    const fileId = 'upload_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    
-    // Add file to uploading state
+    const fileId = 'upload_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
     setUploadingFiles((prev) => [...prev, { id: fileId, name: fileObj.name, progress: 0 }]);
 
     try {
@@ -62,7 +60,6 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
         );
       });
 
-      // Append new url
       const updatedUrls = [...value, response.url];
       onChange(updatedUrls);
       onSuccess(response.url);
@@ -72,7 +69,6 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
       onError(err);
       message.error(`Failed to upload ${fileObj.name}.`);
     } finally {
-      // Remove from uploading list
       setUploadingFiles((prev) => prev.filter((item) => item.id !== fileId));
     }
   };
@@ -80,6 +76,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
   const handleRemove = (urlToRemove: string) => {
     const updatedUrls = value.filter((url) => url !== urlToRemove);
     onChange(updatedUrls);
+    message.success('Image removed');
   };
 
   return (
@@ -93,88 +90,75 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
       }}
     >
       <Space direction="vertical" style={{ width: '100%' }} size="middle">
-        
-        {/* DRAG AND DROP AREA */}
-        <Upload.Dragger
-          multiple
-          customRequest={handleCustomUpload}
-          showUploadList={false}
-          disabled={value.length >= maxCount}
-          style={{ background: '#fff', borderRadius: '6px' }}
-        >
-          <div style={{ padding: '20px 0' }}>
-            <p style={{ display: 'flex', justifyContent: 'center', color: '#1890ff', marginBottom: '8px' }}>
-              <UploadCloud size={36} />
-            </p>
-            <p style={{ fontSize: '15px', fontWeight: 500, margin: '0 0 4px 0' }}>
-              Click or drag images here to upload
-            </p>
-            <p style={{ fontSize: '13px', color: '#8c8c8c', margin: 0 }}>
-              Supports JPEG, PNG, WEBP (Max 10MB per image) - Up to {maxCount} files
-            </p>
-          </div>
-        </Upload.Dragger>
 
-        {/* UPLOADING FILES LIST */}
-        {uploadingFiles.length > 0 && (
-          <div style={{ padding: '0 8px' }}>
-            {uploadingFiles.map((file) => (
-              <div key={file.id} style={{ marginBottom: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <Text type="secondary" ellipsis style={{ maxWidth: '75%', fontSize: '12px' }}>
-                    Uploading {file.name}...
-                  </Text>
-                  <Text strong style={{ fontSize: '12px' }}>{file.progress}%</Text>
-                </div>
-                <Progress percent={file.progress} showInfo={false} size="small" strokeColor="#1890ff" />
-              </div>
-            ))}
-          </div>
+        {/* DRAG AND DROP AREA (Hidden if max count reached) */}
+        {value.length < maxCount && (
+          <Upload.Dragger
+            multiple
+            customRequest={handleCustomUpload}
+            showUploadList={false}
+            style={{ background: '#fff', borderRadius: '6px' }}
+          >
+            <div style={{ padding: '16px 0' }}>
+              <p style={{ display: 'flex', justifyContent: 'center', color: '#1890ff', marginBottom: '8px' }}>
+                <UploadCloud size={32} />
+              </p>
+              <p style={{ fontSize: '14px', fontWeight: 500, margin: '0 0 4px 0' }}>
+                Click or drag images here to upload
+              </p>
+              <p style={{ fontSize: '12px', color: '#8c8c8c', margin: 0 }}>
+                Up to {maxCount} files (Max 10MB each)
+              </p>
+            </div>
+          </Upload.Dragger>
         )}
 
-        {/* PREVIEW GALLERY */}
+        {/* UPLOADING PROGRESS LIST */}
+        {uploadingFiles.map((file) => (
+          <div key={file.id} style={{ padding: '4px 8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+              <Text type="secondary" ellipsis style={{ maxWidth: '75%', fontSize: '12px' }}>
+                Uploading {file.name}...
+              </Text>
+              <Text strong style={{ fontSize: '12px' }}>{file.progress}%</Text>
+            </div>
+            <Progress percent={file.progress} showInfo={false} size="small" strokeColor="#1890ff" />
+          </div>
+        ))}
+
+        {/* PREVIEW GALLERY GRID */}
         {value.length > 0 && (
           <div>
-            <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '10px' }}>
-              Uploaded Images ({value.length})
+            <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '8px' }}>
+              Uploaded Images ({value.length}/{maxCount})
             </div>
-            <div 
-              style={{ 
-                display: 'flex', 
-                flexWrap: 'wrap', 
-                gap: '12px' 
-              }}
-            >
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               {value.map((url, idx) => (
                 <div 
                   key={idx} 
                   style={{ 
                     position: 'relative', 
-                    width: '84px', 
-                    height: '84px',
+                    width: '76px', 
+                    height: '76px',
                     borderRadius: '6px',
                     border: '1px solid #d9d9d9',
                     overflow: 'hidden',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                    backgroundColor: '#000'
                   }}
                 >
                   <img 
                     src={url} 
-                    alt={`Uploaded preview ${idx + 1}`} 
-                    style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      objectFit: 'cover' 
-                    }} 
+                    alt={`Preview ${idx + 1}`} 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                   />
                   <button
                     type="button"
                     onClick={() => handleRemove(url)}
                     style={{
                       position: 'absolute',
-                      top: '4px',
-                      right: '4px',
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      top: '2px',
+                      right: '2px',
+                      backgroundColor: 'rgba(0, 0, 0, 0.7)',
                       border: 'none',
                       borderRadius: '50%',
                       width: '20px',
@@ -184,7 +168,6 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({
                       justifyContent: 'center',
                       color: '#fff',
                       cursor: 'pointer',
-                      padding: 0,
                     }}
                   >
                     <X size={12} />

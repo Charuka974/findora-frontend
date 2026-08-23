@@ -14,12 +14,12 @@ interface ItemCardProps {
 }
 
 const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
-  const { id, title, type, category, status, location, media, createdAt } = item;
+  const { id, title, type, category, status, location, imageUrls, createdAt } = item;
   
   const isLost = type === 'LOST';
   const isOpen = status === 'OPEN';
-  const itemImage = media && media.length > 0 
-    ? media[0] 
+  const itemImage = imageUrls && imageUrls.length > 0 
+    ? imageUrls[0] 
     : 'https://images.unsplash.com/photo-1595079676339-1534801ad6cf?w=600&auto=format&fit=crop&q=80'; // fallback placeholder image for items
 
   return (
@@ -70,7 +70,7 @@ const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
           </div>
         </div>
       }
-      bodyStyle={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '210px', justifyContent: 'space-between' }}
+      styles={{ body: { padding: '16px', display: 'flex', flexDirection: 'column', height: '210px', justifyContent: 'space-between' } }}
       style={{ 
         borderRadius: '12px', 
         overflow: 'hidden', 

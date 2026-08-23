@@ -1,5 +1,7 @@
 export interface MediaUploadResponse {
-  url: string;
-  filename?: string;
+  fileName?: string;
+  objectName?: string;
+  contentType?: string;
   size?: number;
+  url: string;
 }

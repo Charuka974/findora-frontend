@@ -120,7 +120,7 @@ const MyItems: React.FC = () => {
     setIsActionLoading(true);
     const newStatus: ItemStatus = targetItem.status === 'OPEN' ? 'RESOLVED' : 'OPEN';
     try {
-      const updated = await itemService.updateItem(selectedItemId, { status: newStatus });
+      const updated = await itemService.updateItemStatus(selectedItemId, newStatus);
       message.success(`Status updated to ${newStatus}.`);
       setAllItems((prev) =>
         prev.map((item) => (item.id === selectedItemId ? updated : item))
@@ -140,8 +140,8 @@ const MyItems: React.FC = () => {
       title: 'Item',
       key: 'item',
       render: (_: any, record: Item) => {
-        const itemImage = record.media && record.media.length > 0 
-          ? record.media[0] 
+        const itemImage = record.imageUrls && record.imageUrls.length > 0 
+          ? record.imageUrls[0] 
           : 'https://images.unsplash.com/photo-1595079676339-1534801ad6cf?w=100&auto=format&fit=crop&q=80';
         return (
           <Space size="middle">
@@ -282,11 +282,18 @@ const MyItems: React.FC = () => {
             Manage listings you have reported, update statuses, or delete active posts.
           </Paragraph>
         </div>
-        <Link to="/report/lost">
-          <Button type="primary" shape="round" icon={<PlusCircle size={16} style={{ marginRight: '6px' }} />}>
-            Report New Item
-          </Button>
-        </Link>
+        <Space>
+          <Link to="/report/lost">
+            <Button type="primary" danger shape="round" icon={<PlusCircle size={16} style={{ marginRight: '6px' }} />}>
+              Report Lost Item
+            </Button>
+          </Link>
+          <Link to="/report/found">
+            <Button type="primary" shape="round" icon={<PlusCircle size={16} style={{ marginRight: '6px' }} />} style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}>
+              Report Found Item
+            </Button>
+          </Link>
+        </Space>
       </div>
 
       {/* FILTER TABS */}

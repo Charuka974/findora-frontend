@@ -293,11 +293,32 @@ const Home: React.FC = () => {
         ) : hasError ? (
           <ErrorState message="Could not fetch recently reported items. Make sure API Gateway is accessible or mock mode is toggled." />
         ) : recentItems.length === 0 ? (
-          <EmptyState
-            message="No active items listed right now."
-            actionText="Report an Item"
-            onAction={() => navigate("/report/lost")}
-          />
+          <div style={{ textAlign: "center", padding: "48px 24px", background: "#fafafa", borderRadius: "12px", border: "1px dashed #d9d9d9" }}>
+            <Paragraph style={{ color: "#595959", fontSize: "16px", marginBottom: "20px" }}>
+              No active items listed right now. Would you like to create a report?
+            </Paragraph>
+            <Space size="middle">
+              <Button
+                type="primary"
+                danger
+                shape="round"
+                size="large"
+                onClick={() => navigate("/report/lost")}
+                style={{ fontWeight: 600 }}
+              >
+                Report Lost Item
+              </Button>
+              <Button
+                type="primary"
+                shape="round"
+                size="large"
+                onClick={() => navigate("/report/found")}
+                style={{ fontWeight: 600, backgroundColor: "#52c41a", borderColor: "#52c41a" }}
+              >
+                Report Found Item
+              </Button>
+            </Space>
+          </div>
         ) : (
           <Row gutter={[24, 24]}>
             {recentItems.map((item) => (

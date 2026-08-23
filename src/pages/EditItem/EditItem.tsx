@@ -56,8 +56,8 @@ const EditItem: React.FC = () => {
     );
   }
 
-  // Security authorization check: Only owner can edit
-  const isOwner = currentUser && item.userId === currentUser.id;
+  // Security authorization check: Only owner can edit (handling number/string ID comparison safely)
+  const isOwner = currentUser && Number(item.reportedBy) === Number(currentUser.id);
   if (!isOwner) {
     return (
       <div style={{ maxWidth: '800px', margin: '80px auto', padding: '0 24px' }}>
@@ -84,8 +84,8 @@ const EditItem: React.FC = () => {
         type: data.type,
         category: data.category as any,
         location: data.location,
-        media: data.media,
-        createdAt: data.formattedDate,
+        imageUrls: data.imageUrls,
+        date: data.formattedDate,
       });
 
       message.success('Listing details updated successfully!');
@@ -98,15 +98,15 @@ const EditItem: React.FC = () => {
     }
   };
 
-  // Convert Item to ItemForm format
+  // Convert Item to ItemForm format using imageUrls list
   const formInitialValues = {
     title: item.title,
     description: item.description,
     type: item.type,
     category: item.category,
     location: item.location,
-    dateString: item.createdAt, // fallback to createdAt if not specified
-    media: item.media,
+    dateString: item.date || item.createdAt,
+    imageUrls: item.imageUrls || [],
   };
 
   return (
@@ -135,7 +135,7 @@ const EditItem: React.FC = () => {
           boxShadow: '0 6px 20px rgba(0, 0, 0, 0.03)',
           border: '1px solid #f0f0f0',
         }}
-        bodyStyle={{ padding: '32px' }}
+        styles={{ body: { padding: '32px' } }}
       >
         <ItemForm
           initialValues={formInitialValues}

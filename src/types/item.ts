@@ -1,5 +1,5 @@
 export type ItemType = 'LOST' | 'FOUND';
-export type ItemStatus = 'OPEN' | 'RESOLVED';
+export type ItemStatus = 'OPEN' | 'CLAIM_PENDING' | 'CLAIMED' | 'RESOLVED';
 
 export const ITEM_CATEGORIES = [
   'Wallet',
@@ -17,19 +17,31 @@ export const ITEM_CATEGORIES = [
 
 export type ItemCategory = typeof ITEM_CATEGORIES[number];
 
+export interface Claim {
+  claimId: string;
+  claimerId: number;
+  proofDescription: string;
+  contactPhone: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  createdAt: string;
+}
+
 export interface Item {
   id: string;
   title: string;
   description: string;
-  type: ItemType;
   category: ItemCategory;
+  type: ItemType;
   status: ItemStatus;
   location: string;
-  userId: string;
-  media: string[];
+  date?: string;
+  imageUrls: string[]; // Updated to match backend list of image URLs
+  reportedBy?: number;
   createdAt: string;
   updatedAt: string;
-  // Included to support display of owner details if present:
+  claims?: Claim[];
+  
+  // Optional display fields
   ownerName?: string;
   ownerEmail?: string;
   ownerPhone?: string;
@@ -38,20 +50,21 @@ export interface Item {
 export interface CreateItemRequest {
   title: string;
   description: string;
-  type: ItemType;
   category: ItemCategory;
+  type: ItemType;
   location: string;
-  media: string[];
-  createdAt?: string;
+  date?: string;
+  imageUrls: string[]; // Updated to match backend list of image URLs
+  reportedBy?: number;
 }
 
 export interface UpdateItemRequest {
   title?: string;
   description?: string;
-  type?: ItemType;
   category?: ItemCategory;
+  type?: ItemType;
   status?: ItemStatus;
   location?: string;
-  media?: string[];
-  createdAt?: string;
+  date?: string;
+  imageUrls?: string[]; // Updated to match backend list of image URLs
 }

@@ -91,8 +91,7 @@ const ItemDetails: React.FC = () => {
   }
 
   // Permission Check
-  const isOwner = currentUser && item.userId === currentUser.id;
-  const isLost = item.type === 'LOST';
+  const isOwner = currentUser && Number(item.reportedBy) === Number(currentUser.id);  const isLost = item.type === 'LOST';
   const isOpen = item.status === 'OPEN';
 
   const handleDeleteConfirm = async () => {
@@ -113,7 +112,7 @@ const ItemDetails: React.FC = () => {
     setIsSubmittingAction(true);
     const newStatus: ItemStatus = item.status === 'OPEN' ? 'RESOLVED' : 'OPEN';
     try {
-      const updated = await itemService.updateItem(item.id, { status: newStatus });
+      const updated = await itemService.updateItemStatus(item.id, newStatus);
       setItem(updated);
       message.success(`Listing status marked as ${newStatus}.`);
       setIsResolveOpen(false);
@@ -133,9 +132,9 @@ const ItemDetails: React.FC = () => {
     message.success('Link copied to clipboard!');
   };
 
-  // Image assets gallery logic
-  const imageGallery = item.media && item.media.length > 0
-    ? item.media
+  // Image assets gallery logic mapping imageUrls array
+  const imageGallery = item.imageUrls && item.imageUrls.length > 0
+    ? item.imageUrls
     : ['https://images.unsplash.com/photo-1595079676339-1534801ad6cf?w=800&auto=format&fit=crop&q=80'];
 
   return (
@@ -162,7 +161,7 @@ const ItemDetails: React.FC = () => {
         {/* LEFT PANEL: IMAGE GALLERIES */}
         <Col xs={24} md={12}>
           <Card 
-            bodyStyle={{ padding: '8px' }} 
+            styles={{ body: { padding: '8px' } }}
             style={{ 
               borderRadius: '16px', 
               overflow: 'hidden', 
@@ -177,7 +176,7 @@ const ItemDetails: React.FC = () => {
                     <img 
                       src={url} 
                       alt={`${item.title} gallery ${idx + 1}`} 
-                      style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' }} 
+                      style={{ width: '100%', height: '400px', objectFit: 'contain', backgroundColor: '#000' }} 
                     />
                   </div>
                 ))}
@@ -203,7 +202,7 @@ const ItemDetails: React.FC = () => {
               border: '1px solid #f0f0f0',
               height: '100%'
             }}
-            bodyStyle={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}
+            styles={{ body: { padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' } }}
           >
             <div>
               {/* STATUS & TYPE BADGES */}
@@ -267,7 +266,7 @@ const ItemDetails: React.FC = () => {
               {/* ACTION BUTTONS */}
               {isOwner ? (
                 /* OWNER CONTROLS */
-                <Card style={{ background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '12px' }} bodyStyle={{ padding: '16px' }}>
+                <Card style={{ background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '12px' }} styles={{ body: { padding: '16px' } }}>
                   <Text type="secondary" style={{ display: 'block', marginBottom: '12px', fontWeight: 500, fontSize: '13px' }}>
                     You created this listing. Manage status or edit details below:
                   </Text>
@@ -405,7 +404,7 @@ const ItemDetails: React.FC = () => {
       >
         <div style={{ padding: '16px 0' }}>
           <Paragraph>
-            Get in touch with the listing creator to arrange a verify return.
+            Get in touch with the listing creator to arrange a verified return.
           </Paragraph>
           <Descriptions column={1} bordered size="middle" style={{ marginTop: '16px' }}>
             <Descriptions.Item label={<span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><User size={14} /> Name</span>}>

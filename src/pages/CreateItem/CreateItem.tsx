@@ -30,8 +30,8 @@ const CreateItem: React.FC = () => {
         type: itemType,
         category: data.category as any,
         location: data.location,
-        media: data.media,
-        createdAt: data.formattedDate,
+        imageUrls: data.imageUrls,
+        date: data.formattedDate,
       });
 
       // Show toast message
@@ -71,7 +71,7 @@ const CreateItem: React.FC = () => {
           boxShadow: '0 6px 20px rgba(0, 0, 0, 0.03)',
           border: '1px solid #f0f0f0',
         }}
-        bodyStyle={{ padding: '32px' }}
+        styles={{ body: { padding: '32px' } }}
       >
         <ItemForm
           onSubmit={handleFormSubmit}
