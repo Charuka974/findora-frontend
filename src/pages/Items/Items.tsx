@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { 
   Row, 
   Col, 
@@ -24,7 +24,7 @@ import EmptyState from '../../components/common/EmptyState';
 const { Title, Paragraph, Text } = Typography;
 
 const Items: React.FC = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
   const [items, setItems] = useState<Item[]>([]);

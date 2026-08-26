@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Descriptions, Avatar, Button, Modal, Form, Input, Typography, message, Space, Row, Col } from 'antd';
+import { Card, Descriptions, Avatar, Button, Modal, Form, Input, Typography, message, Row, Col } from 'antd';
 import { User, Mail, Phone, Calendar, Edit3, ShieldAlert } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useAuth } from '../../contexts/AuthContext';

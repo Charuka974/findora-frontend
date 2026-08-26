@@ -23,7 +23,7 @@ import {
 import { itemService } from "../../services/itemService";
 import type { Item } from "../../types/item";
 import ItemCard from "../../components/items/ItemCard";
-import EmptyState from "../../components/common/EmptyState";
+// import EmptyState from "../../components/common/EmptyState";
 import ErrorState from "../../components/common/ErrorState";
 
 const { Title, Paragraph, Text } = Typography;
