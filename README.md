@@ -5,7 +5,6 @@
 - **Student ID:** 241722035
 - **Slack Handle:** Charuka (`U0BF12U29NF`)
 - **GCP Project ID:** findora-cloud-platform
-- **Public Deployed URL:** [http://34.95.67.46/](http://34.95.67.46/)
 
 ---
 
